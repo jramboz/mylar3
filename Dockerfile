@@ -1,24 +1,28 @@
 ARG BASE_VERSION=3.12-alpine
+FROM ghcr.io/linuxserver/unrar:latest AS unrar
 FROM python:${BASE_VERSION}
 
 # set version label
 ARG MYLAR_COMMIT=build
 ARG ORG=jramboz
-LABEL version ${BASE_VERSION}_${MYLAR_COMMIT}
+LABEL version=${BASE_VERSION}_${MYLAR_COMMIT}
+
+# Set environment variable for unbuffered output
+ENV PYTHONUNBUFFERED=1
 
 RUN \
 echo "**** install system packages ****" && \
  apk add --no-cache \
- git=2.24.3-r0 \
+ git \
  # cfscrape dependecies
- nodejs=12.15.0-r1 \
+ nodejs \
  # unrar-cffi & Pillow dependencies
- build-base=0.5-r1 \
+ build-base \
  # unar-cffi dependencies
- libffi-dev=3.2.1-r6 \
+ libffi-dev \
  # Pillow dependencies
- zlib-dev=1.2.11-r3 \
- jpeg-dev=8-r6
+ zlib-dev \
+ jpeg-dev
 
 # It might be better to check out release tags than python3-dev HEAD.
 # For development work I reccomend mounting a full git repo from the
@@ -31,10 +35,13 @@ RUN echo "**** install requirements ****" && \
  pip3 install --no-cache-dir -U -r /app/mylar/requirements.txt && \
  rm -rf ~/.cache/pip/*
 
+# add unrar
+COPY --from=unrar /usr/bin/unrar-ubuntu /usr/bin/unrar
+
 # TODO image could be further slimmed by moving python wheel building into a
 # build image and copying the results to the final image.
 
 # ports and volumes
-VOLUME /config /comics /downloads
+# VOLUME /config /comics /downloads
 EXPOSE 8090
-CMD ["python3", "/app/mylar/Mylar.py", "--nolaunch", "--quiet", "--datadir", "/config/mylar"]
+CMD ["python3", "/app/mylar/Mylar.py", "--nolaunch", "--datadir", "/config/mylar"]
